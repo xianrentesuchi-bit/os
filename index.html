@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Enterprise WebOS v3</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style id="theme-variables">
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, #f1f5f9 0%, #cbd5e1 100%);
+            --bg-image: none;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --active-border: rgba(59, 130, 246, 0.6);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --accent-hover: #1d4ed8;
+            --editor-bg: #ffffff;
+        }
+    </style>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            background: var(--bg-gradient);
+            background-size: cover;
+            background-position: center;
+            background-image: var(--bg-image);
+            color: var(--text-main);
+        }
+
+        .desktop {
+            width: 100%;
+            height: calc(100vh - 48px);
+            position: relative;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 90px);
+            grid-template-rows: repeat(auto-fill, 100px);
+            gap: 16px;
+            justify-content: start;
+            align-content: start;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .desktop-icon:hover {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: var(--glass-border);
+        }
+        .desktop-icon:active {
+            transform: scale(0.95);
+        }
+        .icon-wrapper {
+            width: 56px;
+            height: 56px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-wrapper .material-symbols-rounded {
+            font-size: 48px;
+            color: var(--accent);
+        }
+        .icon-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            padding: 0 4px;
+            color: var(--text-main);
+        }
+
+        .window {
+            position: absolute;
+            top: 60px;
+            left: 60px;
+            width: 800px;
+            height: 550px;
+            min-width: 350px;
+            min-height: 250px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transform: scale(0.92) translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.15s;
+            pointer-events: none;
+        }
+        .window.show {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+        .window.active {
+            border-color: var(--active-border);
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
+        }
+        .window.maximized {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100vh - 48px) !important;
+            border-radius: 0;
+        }
+        .window.minimized {
+            opacity: 0;
+            transform: scale(0.8) translateY(40px);
+            pointer-events: none;
+        }
+
+        .window-header {
+            height: 48px;
+            background: rgba(0, 0, 0, 0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: move;
+        }
+        .window-title-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .window-title-area .material-symbols-rounded {
+            font-size: 20px;
+            color: var(--text-muted);
+        }
+        .window-controls {
+            display: flex;
+            gap: 6px;
+        }
+        .control-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .control-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-main);
+        }
+        .control-btn.btn-close:hover {
+            background: #ef4444;
+            color: white;
+        }
+        .control-btn .material-symbols-rounded {
+            font-size: 18px;
+        }
+
+        /* 8方向リサイズハンドル */
+        .resize-edge {
+            position: absolute;
+            z-index: 999;
+            background: transparent;
+        }
+        .resize-edge.n  { top: 0; left: 4px; right: 4px; height: 6px; cursor: n-resize; }
+        .resize-edge.s  { bottom: 0; left: 4px; right: 4px; height: 6px; cursor: s-resize; }
+        .resize-edge.e  { top: 4px; bottom: 4px; right: 0; width: 6px; cursor: e-resize; }
+        .resize-edge.w  { top: 4px; bottom: 4px; left: 0; width: 6px; cursor: w-resize; }
+        .resize-edge.nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nw-resize; }
+        .resize-edge.ne { top: 0; right: 0; width: 8px; height: 8px; cursor: ne-resize; }
+        .resize-edge.sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: sw-resize; }
+        .resize-edge.se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: se-resize; }
+
+        .editor-container {
+            display: flex;
+            flex: 1;
+            height: calc(100% - 48px);
+            background: var(--editor-bg);
+        }
+        .editor-workspace, .editor-preview {
+            width: 50%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .editor-workspace {
+            border-right: 1px solid var(--glass-border);
+        }
+        .editor-tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding-top: 4px;
+            justify-content: space-between;
+            align-items: center;
+            padding-right: 8px;
+        }
+        .tabs-left {
+            display: flex;
+        }
+        .tab {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            margin-left: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+        .tab.active {
+            background: var(--editor-bg);
+            color: var(--text-main);
+            border-color: #e2e8f0;
+            position: relative;
+        }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            top: -4px; left: 0; right: 0; height: 2px;
+            background: var(--accent);
+        }
+        .tab .material-symbols-rounded { font-size: 16px; }
+
+        .editor-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+        .action-btn:hover {
+            background: rgba(0,0,0,0.05);
+            color: var(--text-main);
+        }
+
+        .editor-textarea-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        textarea.code-pane {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent;
+            color: #0969da;
+            border: none;
+            padding: 16px;
+            font-family: 'Fira Code', Consolas, Monaco, monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            display: none;
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: pan-y;
+        }
+        textarea.code-pane.active { display: block; }
+        
+        .preview-header {
+            height: 37px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            padding-left: 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        iframe.preview-iframe {
+            flex: 1;
+            background: #ffffff;
+            border: none;
+        }
+
+        .explorer-layout {
+            display: flex;
+            flex: 1;
+            height: calc(100% - 48px);
+            background: #f8fafc;
+        }
+        .explorer-sidebar {
+            width: 220px;
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.02);
+        }
+        .sidebar-title {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tree-node {
+            padding: 6px 16px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        .tree-node:hover {
+            background: rgba(0,0,0,0.03);
+            color: var(--text-main);
+        }
+        .tree-node.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .tree-node .material-symbols-rounded {
+            font-size: 18px;
+        }
+        .explorer-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .explorer-toolbar {
+            height: 40px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.01);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+        }
+        .toolbar-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .toolbar-btn:hover {
+            background: rgba(0,0,0,0.05);
+            color: var(--text-main);
+        }
+        .toolbar-btn .material-symbols-rounded { font-size: 18px; }
+        .explorer-view {
+            flex: 1;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 80px);
+            grid-template-rows: repeat(auto-fill, 90px);
+            gap: 16px;
+            overflow-y: auto;
+        }
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            padding: 8px;
+            position: relative;
+        }
+        .file-item:hover {
+            background: rgba(0,0,0,0.03);
+            border-color: var(--glass-border);
+        }
+        .file-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        .file-item .material-symbols-rounded { font-size: 28px; }
+        .file-item.dir .material-symbols-rounded { color: #f59e0b; }
+        .file-item.file .material-symbols-rounded { color: #3b82f6; }
+        .file-item.image .material-symbols-rounded { color: #10b981; }
+        .file-label {
+            font-size: 11px;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .settings-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: calc(100% - 48px);
+            background: #f8fafc;
+            overflow-y: auto;
+        }
+        .settings-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .settings-section h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .theme-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .theme-card {
+            flex: 1;
+            padding: 16px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            background: rgba(0,0,0,0.01);
+            transition: all 0.2s;
+        }
+        .theme-card:hover {
+            background: rgba(0,0,0,0.03);
+            border-color: var(--text-muted);
+        }
+        .theme-card.active {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .theme-title {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .danger-zone {
+            margin-top: 12px;
+            padding: 16px;
+            border: 1px dashed #ef4444;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.02);
+        }
+        .danger-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .danger-btn:hover {
+            background: #dc2626;
+        }
+
+        .notepad-content {
+            flex: 1;
+            height: calc(100% - 48px);
+            background: #ffffff;
+            color: #000000;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            border: none;
+            outline: none;
+            resize: none;
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: pan-y;
+        }
+
+        .gallery-content {
+            flex: 1;
+            height: calc(100% - 48px);
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            position: relative;
+        }
+        .gallery-content img {
+            max-width: 100%;
+            max-height: calc(100% - 40px);
+            object-fit: contain;
+        }
+        .gallery-toolbar {
+            width: 100%;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+        .gallery-btn {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .gallery-btn:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        /* アプリストア用スタイル */
+        .store-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: calc(100% - 48px);
+            background: #f8fafc;
+            overflow-y: auto;
+        }
+        .store-empty-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 16px;
+            color: var(--text-muted);
+            min-height: 300px;
+        }
+        .store-empty-wrapper .material-symbols-rounded {
+            font-size: 64px;
+            color: var(--accent);
+        }
+        .store-empty-text {
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            color: var(--text-main);
+        }
+        .store-desc {
+            font-size: 13px;
+            max-width: 440px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .store-upload-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            transition: all 0.2s;
+        }
+        .store-upload-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        /* 独自ダイアログシステム用スタイル */
+        .dialog-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.15);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .dialog-box {
+            background: #ffffff;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            width: 400px;
+            max-height: 80%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            color: var(--text-main);
+        }
+        .dialog-header {
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .dialog-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .dialog-input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.02);
+            color: var(--text-main);
+            outline: none;
+            font-size: 13px;
+        }
+        .dialog-input:focus {
+            border-color: var(--accent);
+        }
+        .dialog-footer {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        .dialog-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .dialog-btn.primary { background: var(--accent); color: white; }
+        .dialog-btn.secondary { background: rgba(0,0,0,0.05); color: var(--text-main); }
+        .dialog-dir-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .dialog-dir-item:hover { background: rgba(0,0,0,0.03); }
+        .dialog-dir-item.selected { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent); }
+
+        .taskbar {
+            width: 100%;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            z-index: 99999;
+        }
+        .taskbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            flex: 1;
+        }
+        .sys-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            background: rgba(0,0,0,0.03);
+        }
+        .sys-btn:hover { background: rgba(0,0,0,0.08); }
+        
+        .taskbar-apps {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 100%;
+        }
+        .running-app-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: background 0.2s, transform 0.1s;
+            position: relative;
+            border-radius: 8px;
+        }
+        .running-app-icon:hover {
+            background: rgba(0,0,0,0.03);
+        }
+        .running-app-icon.active {
+            color: var(--accent);
+            background: rgba(0,0,0,0.05);
+        }
+        .running-app-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            opacity: 0;
+        }
+        .running-app-icon.running::after {
+            opacity: 1;
+        }
+        .running-app-icon.active::after {
+            background: var(--accent);
+            width: 16px;
+            border-radius: 2px;
+        }
+        .running-app-icon.dragging {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
+        .running-app-icon .material-symbols-rounded {
+            font-size: 28px;
+        }
+
+        .taskbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.03);
+            padding: 4px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .taskbar-right:hover {
+            background: rgba(0,0,0,0.08);
+        }
+        .time-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .app-launcher-menu {
+            position: absolute;
+            bottom: 56px;
+            left: 0;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.1);
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 100000;
+        }
+        .app-launcher-menu.show {
+            display: flex;
+        }
+        .launcher-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .launcher-item:hover {
+            background: rgba(0,0,0,0.03);
+        }
+        .launcher-item .material-symbols-rounded {
+            font-size: 24px;
+            color: var(--accent);
+        }
+        .launcher-item-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        #file-upload-input { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="desktop" id="desktop">
+        <div class="desktop-icon" id="icon-explorer">
+            <div class="icon-wrapper">
+                <span class="material-symbols-rounded">folder_open</span>
+            </div>
+            <div class="icon-label">Explorer</div>
+        </div>
+        <div class="desktop-icon" id="icon-editor">
+            <div class="icon-wrapper">
+                <span class="material-symbols-rounded">terminal</span>
+            </div>
+            <div class="icon-label">IDE Editor</div>
+        </div>
+        <div class="desktop-icon" id="icon-store">
+            <div class="icon-wrapper">
+                <span class="material-symbols-rounded">storefront</span>
+            </div>
+            <div class="icon-label">App Store</div>
+        </div>
+        <div class="desktop-icon" id="icon-settings">
+            <div class="icon-wrapper">
+                <span class="material-symbols-rounded">settings</span>
+            </div>
+            <div class="icon-label">Settings</div>
+        </div>
+    </div>
+
+    <div id="window-container"></div>
+    <div id="dialog-container"></div>
+
+    <div class="taskbar">
+        <div class="taskbar-left">
+            <button class="sys-btn" id="sys-apps-trigger"><span class="material-symbols-rounded">apps</span></button>
+            <div class="app-launcher-menu" id="app-launcher-menu">
+                <div class="launcher-item" data-app="explorer">
+                    <span class="material-symbols-rounded">folder_open</span>
+                    <span class="launcher-item-label">Explorer</span>
+                </div>
+                <div class="launcher-item" data-app="editor">
+                    <span class="material-symbols-rounded">terminal</span>
+                    <span class="launcher-item-label">IDE Editor</span>
+                </div>
+                <div class="launcher-item" data-app="store">
+                    <span class="material-symbols-rounded">storefront</span>
+                    <span class="launcher-item-label">App Store</span>
+                </div>
+                <div class="launcher-item" data-app="settings">
+                    <span class="material-symbols-rounded">settings</span>
+                    <span class="launcher-item-label">Settings</span>
+                </div>
+                <div class="launcher-item" data-app="notepad">
+                    <span class="material-symbols-rounded">description</span>
+                    <span class="launcher-item-label">Notepad</span>
+                </div>
+                <div class="launcher-item" data-app="gallery">
+                    <span class="material-symbols-rounded">image</span>
+                    <span class="launcher-item-label">Gallery</span>
+                </div>
+            </div>
+            <div class="taskbar-apps" id="taskbar-apps-container"></div>
+        </div>
+        <div class="taskbar-right">
+            <div class="time-area">
+                <span id="clock">00:00</span>
+                <span id="date-display">2026/01/01</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let topZIndex = 100;
+        let windowInstances = {};
+        let appOrder = ['explorer', 'editor', 'store', 'settings', 'notepad', 'gallery'];
+        let customApps = {};
+
+        // 独自ダイアログシステム用マネージャー（非同期）
+        const sysDialog = {
+            alert: (message, title = 'システム通知') => {
+                return new Promise((resolve) => {
+                    const id = 'dialog-' + Math.random().toString(36).substr(2, 9);
+                    const overlay = document.createElement('div');
+                    overlay.className = 'dialog-overlay';
+                    overlay.id = id;
+                    overlay.innerHTML = `
+                        <div class="dialog-box">
+                            <div class="dialog-header">${title}</div>
+                            <div class="dialog-body"><div>${message}</div></div>
+                            <div class="dialog-footer">
+                                <button class="dialog-btn primary" id="${id}-ok">OK</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('dialog-container').appendChild(overlay);
+                    document.getElementById(`${id}-ok`).addEventListener('click', () => {
+                        overlay.remove();
+                        resolve();
+                    });
+                });
+            },
+            prompt: (message, defaultValue = '', title = '入力を要求') => {
+                return new Promise((resolve) => {
+                    const id = 'dialog-' + Math.random().toString(36).substr(2, 9);
+                    const overlay = document.createElement('div');
+                    overlay.className = 'dialog-overlay';
+                    overlay.id = id;
+                    overlay.innerHTML = `
+                        <div class="dialog-box">
+                            <div class="dialog-header">${title}</div>
+                            <div class="dialog-body">
+                                <div>${message}</div>
+                                <input type="text" class="dialog-input" id="${id}-input" value="${defaultValue}" />
+                            </div>
+                            <div class="dialog-footer">
+                                <button class="dialog-btn secondary" id="${id}-cancel">キャンセル</button>
+                                <button class="dialog-btn primary" id="${id}-ok">確定</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('dialog-container').appendChild(overlay);
+                    const inputEl = document.getElementById(`${id}-input`);
+                    inputEl.focus();
+                    inputEl.select();
+
+                    const handleOk = () => {
+                        const val = inputEl.value;
+                        overlay.remove();
+                        resolve(val);
+                    };
+
+                    inputEl.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') handleOk();
+                    });
+                    document.getElementById(`${id}-cancel`).addEventListener('click', () => {
+                        overlay.remove();
+                        resolve(null);
+                    });
+                    document.getElementById(`${id}-ok`).addEventListener('click', handleOk);
+                });
+            }
+        };
+
+        const updateClock = () => {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('date-display').textContent = now.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        };
+        setInterval(updateClock, 1000); updateClock();
+
+        let fs = {
+            root: {
+                type: 'dir',
+                name: 'Root',
+                children: {
+                    'index.html': { type: 'file', name: 'index.html', ext: 'html', content: '<div class="card">\n  <h1>Hello WebOS</h1>\n  <p>タブでHTML/CSS/JSを分けて書けます！</p>\n  <button id="btn">Click Me</button>\n</div>' },
+                    'style.css': { type: 'file', name: 'style.css', ext: 'css', content: 'body {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  background: #f8fafc;\n  color: #1e293b;\n  font-family: sans-serif;\n}\n.card {\n  padding: 24px;\n  background: white;\n  border: 1px solid rgba(0,0,0,0.1);\n  border-radius: 12px;\n  text-align: center;\n  box-shadow: 0 4px 6px rgba(0,0,0,0.05);\n}\nbutton {\n  margin-top: 12px;\n  padding: 8px 16px;\n  background: #3b82f6;\n  color: white;\n  border: none;\n  border-radius: 6px;\n  cursor: pointer;\n}' },
+                    'script.js': { type: 'file', name: 'script.js', ext: 'js', content: "document.getElementById('btn').addEventListener('click', () => {\n  alert('WebOSの独自UIアラートに割り込んで動きます！');\n});" },
+                    'memo.txt': { type: 'file', name: 'memo.txt', ext: 'txt', content: 'これはメモ帳アプリで開かれるデフォルトのテキストファイルです。' }
+                }
+            }
+        };
+
+        const loadFS = () => {
+            const saved = localStorage.getItem('webos_fs');
+            if (saved) {
+                try { fs = JSON.parse(saved); } catch(e) { saveFS(); }
+            } else {
+                saveFS();
+            }
+        };
+        const saveFS = () => { localStorage.setItem('webos_fs', JSON.stringify(fs)); };
+        loadFS();
+
+        const loadCustomApps = () => {
+            const savedApps = localStorage.getItem('webos_custom_apps');
+            if (savedApps) {
+                try {
+                    customApps = JSON.parse(savedApps);
+                    for (let appKey in customApps) {
+                        if (!appOrder.includes(appKey)) {
+                            appOrder.push(appKey);
+                        }
+                        createDesktopIconForCustomApp(appKey, customApps[appKey].name);
+                        createLauncherItemForCustomApp(appKey, customApps[appKey].name);
+                    }
+                } catch(e) {}
+            }
+        };
+
+        const saveCustomApps = () => {
+            localStorage.setItem('webos_custom_apps', JSON.stringify(customApps));
+        };
+
+        const createDesktopIconForCustomApp = (appKey, appName) => {
+            if (document.getElementById(`icon-${appKey}`)) return;
+            const desktop = document.getElementById('desktop');
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'desktop-icon';
+            iconDiv.id = `icon-${appKey}`;
+            iconDiv.innerHTML = `
+                <div class="icon-wrapper">
+                    <span class="material-symbols-rounded">deployed_code</span>
+                </div>
+                <div class="icon-label">${appName}</div>
+            `;
+            iconDiv.addEventListener('click', () => launchAppByName(appKey));
+            desktop.appendChild(iconDiv);
+        };
+
+        const createLauncherItemForCustomApp = (appKey, appName) => {
+            if (document.querySelector(`.launcher-item[data-app="${appKey}"]`)) return;
+            const menu = document.getElementById('app-launcher-menu');
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'launcher-item';
+            itemDiv.setAttribute('data-app', appKey);
+            itemDiv.innerHTML = `
+                <span class="material-symbols-rounded">deployed_code</span>
+                <span class="launcher-item-label">${appName}</span>
+            `;
+            itemDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                launchAppByName(appKey);
+                menu.classList.remove('show');
+            });
+            menu.appendChild(itemDiv);
+        };
+
+        const loadSettings = () => {
+            const savedWallpaper = localStorage.getItem('webos_wallpaper');
+            if (savedWallpaper) {
+                document.documentElement.style.setProperty('--bg-image', `url(${savedWallpaper})`);
+            }
+            const savedOrder = localStorage.getItem('webos_app_order');
+            if(savedOrder) {
+                try { appOrder = JSON.parse(savedOrder); } catch(e){}
+            }
+        };
+
+        const getDirectoriesList = () => {
+            let list = [];
+            const walk = (dir, currentPath, printableName) => {
+                list.push({ path: [...currentPath], name: printableName });
+                if (dir.children) {
+                    for (let k in dir.children) {
+                        if (dir.children[k].type === 'dir') {
+                            walk(dir.children[k], [...currentPath, k], printableName + '/' + dir.children[k].name);
+                        }
+                    }
+                }
+            };
+            walk(fs.root, ['root'], 'Root');
+            return list;
+        };
+
+        const getObjectByPath = (pathArr) => {
+            let cur = fs;
+            for (let p of pathArr) { cur = cur[p] || cur.children[p]; }
+            return cur;
+        };
+
+        const generateUUID = () => 'win_' + Math.random().toString(36).substr(2, 9);
+
+        const createBaseWindow = (id, title, icon, contentHtml) => {
+            const win = document.createElement('div');
+            win.className = 'window';
+            win.id = id;
+            win.style.top = `${80 + (topZIndex % 10) * 20}px`;
+            win.style.left = `${80 + (topZIndex % 10) * 20}px`;
+            
+            win.innerHTML = `
+                <div class="window-header" id="${id}-header">
+                    <div class="window-title-area">
+                        <span class="material-symbols-rounded">${icon}</span>
+                        <span id="${id}-title-text">${title}</span>
+                    </div>
+                    <div class="window-controls">
+                        <button class="control-btn" id="${id}-btn-minimize"><span class="material-symbols-rounded">minimize</span></button>
+                        <button class="control-btn" id="${id}-btn-maximize"><span class="material-symbols-rounded">crop_square</span></button>
+                        <button class="control-btn btn-close" id="${id}-btn-close"><span class="material-symbols-rounded">close</span></button>
+                    </div>
+                </div>
+                ${contentHtml}
+                <div class="resize-edge n" data-direction="n"></div>
+                <div class="resize-edge s" data-direction="s"></div>
+                <div class="resize-edge e" data-direction="e"></div>
+                <div class="resize-edge w" data-direction="w"></div>
+                <div class="resize-edge nw" data-direction="nw"></div>
+                <div class="resize-edge ne" data-direction="ne"></div>
+                <div class="resize-edge sw" data-direction="sw"></div>
+                <div class="resize-edge se" data-direction="se"></div>
+            `;
+            document.getElementById('window-container').appendChild(win);
+            
+            setTimeout(() => {
+                win.classList.add('show');
+                makeActive(id);
+            }, 10);
+
+            setupWindowManager(id);
+            return win;
+        };
+
+        const makeActive = (id) => {
+            const win = document.getElementById(id);
+            if (!win) return;
+            topZIndex++;
+            win.style.zIndex = topZIndex;
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            win.classList.add('active');
+            updateGlobalDock();
+        };
+
+        const setupWindowManager = (id) => {
+            const win = document.getElementById(id);
+            const header = document.getElementById(`${id}-header`);
+            
+            win.addEventListener('mousedown', () => makeActive(id));
+            win.addEventListener('touchstart', () => makeActive(id), {passive: true});
+
+            document.getElementById(`${id}-btn-minimize`).addEventListener('click', (e) => {
+                e.stopPropagation();
+                win.classList.add('minimized');
+                win.classList.remove('active');
+                updateGlobalDock();
+            });
+
+            document.getElementById(`${id}-btn-maximize`).addEventListener('click', (e) => {
+                e.stopPropagation();
+                win.classList.toggle('maximized');
+            });
+
+            document.getElementById(`${id}-btn-close`).addEventListener('click', (e) => {
+                e.stopPropagation();
+                win.classList.remove('show');
+                setTimeout(() => {
+                    win.remove();
+                    delete windowInstances[id];
+                    updateGlobalDock();
+                }, 200);
+            });
+
+            let dragMode = null; 
+            let resizeDir = null; 
+            let startX, startY, initialLeft, initialTop, initialWidth, initialHeight;
+
+            const onActionStart = (e, mode, dir = null) => {
+                if (win.classList.contains('maximized')) return;
+                dragMode = mode;
+                resizeDir = dir;
+                const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+                const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+                startX = pageX; startY = pageY;
+                
+                const style = window.getComputedStyle(win);
+                initialLeft = parseInt(style.left, 10);
+                initialTop = parseInt(style.top, 10);
+                initialWidth = parseInt(style.width, 10);
+                initialHeight = parseInt(style.height, 10);
+                
+                if(e.type === 'mousedown') e.preventDefault();
+            };
+
+            header.addEventListener('mousedown', (e) => { if(!e.target.closest('.window-controls')) onActionStart(e, 'move') });
+            header.addEventListener('touchstart', (e) => { if(!e.target.closest('.window-controls')) onActionStart(e, 'move') }, {passive:true});
+            
+            win.querySelectorAll('.resize-edge').forEach(edge => {
+                const dir = edge.dataset.direction;
+                edge.addEventListener('mousedown', (e) => onActionStart(e, 'resize', dir));
+                edge.addEventListener('touchstart', (e) => onActionStart(e, 'resize', dir), {passive:true});
+            });
+
+            const onActionMove = (e) => {
+                if (!dragMode) return;
+                const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+                const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+                const deltaX = pageX - startX; const deltaY = pageY - startY;
+                
+                if (dragMode === 'move') {
+                    win.style.left = `${initialLeft + deltaX}px`;
+                    win.style.top = `${initialTop + deltaY}px`;
+                } else if (dragMode === 'resize') {
+                    let newWidth = initialWidth;
+                    let newHeight = initialHeight;
+                    let newLeft = initialLeft;
+                    let newTop = initialTop;
+
+                    const minW = 350;
+                    const minH = 250;
+
+                    if (resizeDir.includes('e')) {
+                        newWidth = Math.max(minW, initialWidth + deltaX);
+                    } else if (resizeDir.includes('w')) {
+                        const potentialWidth = initialWidth - deltaX;
+                        if (potentialWidth >= minW) {
+                            newWidth = potentialWidth;
+                            newLeft = initialLeft + deltaX;
+                        }
+                    }
+
+                    if (resizeDir.includes('s')) {
+                        newHeight = Math.max(minH, initialHeight + deltaY);
+                    } else if (resizeDir.includes('n')) {
+                        const potentialHeight = initialHeight - deltaY;
+                        if (potentialHeight >= minH) {
+                            newHeight = potentialHeight;
+                            newTop = initialTop + deltaY;
+                        }
+                    }
+
+                    win.style.width = `${newWidth}px`;
+                    win.style.height = `${newHeight}px`;
+                    win.style.left = `${newLeft}px`;
+                    win.style.top = `${newTop}px`;
+                }
+            };
+            
+            const onActionEnd = () => dragMode = null;
+            document.addEventListener('mousemove', onActionMove);
+            document.addEventListener('mouseup', onActionEnd);
+            document.addEventListener('touchmove', onActionMove, {passive: false});
+            document.addEventListener('touchend', onActionEnd);
+        };
+
+        const openExplorer = () => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'explorer', currentPath: ['root'], selectedItem: null };
+            
+            const html = `
+                <div class="explorer-layout">
+                    <div class="explorer-sidebar">
+                        <div class="sidebar-title">Quick Access</div>
+                        <div class="tree-node active"><span class="material-symbols-rounded">grid_view</span>Root</div>
+                    </div>
+                    <div class="explorer-main">
+                        <div class="explorer-toolbar">
+                            <button class="toolbar-btn" id="${id}-new-folder"><span class="material-symbols-rounded">create_new_folder</span>Folder</button>
+                            <button class="toolbar-btn" id="${id}-new-file"><span class="material-symbols-rounded">note_add</span>File</button>
+                            <button class="toolbar-btn" id="${id}-upload-file"><span class="material-symbols-rounded">upload</span>Upload</button>
+                            <button class="toolbar-btn" id="${id}-exec-app" style="color:var(--accent); font-weight:600;"><span class="material-symbols-rounded">play_arrow</span>Appとしてロード</button>
+                            <input type="file" id="${id}-file-input" style="display:none;" />
+                        </div>
+                        <div class="explorer-view" id="${id}-grid"></div>
+                    </div>
+                </div>
+            `;
+            createBaseWindow(id, 'Explorer', 'folder_open', html);
+            renderExplorerGrid(id);
+
+            document.getElementById(`${id}-grid`).addEventListener('click', () => {
+                windowInstances[id].selectedItem = null;
+                renderExplorerGrid(id);
+            });
+
+            document.getElementById(`${id}-new-folder`).addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const name = await sysDialog.prompt('フォルダ名を入力してください:', '', '新規フォルダ作成');
+                if (!name) return;
+                const dir = getObjectByPath(windowInstances[id].currentPath);
+                if (dir.children[name]) {
+                    await sysDialog.alert('同名のオブジェクトが存在します。', 'エラー');
+                    return;
+                }
+                dir.children[name] = { type: 'dir', name: name, children: {} };
+                saveFS(); renderExplorerGrid(id);
+            });
+
+            document.getElementById(`${id}-new-file`).addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const name = await sysDialog.prompt('ファイル名を入力してください(拡張子付き):', '', '新規ファイル作成');
+                if (!name) return;
+                const parts = name.split('.'); const ext = parts.length > 1 ? parts.pop().toLowerCase() : 'txt';
+                const allowed = ['html', 'css', 'js', 'txt', 'zip', 'jpeg', 'png'];
+                if (!allowed.includes(ext)) {
+                    await sysDialog.alert('対応していない拡張子です。', 'エラー');
+                    return;
+                }
+                const dir = getObjectByPath(windowInstances[id].currentPath);
+                if (dir.children[name]) {
+                    await sysDialog.alert('同名のオブジェクトが存在します。', 'エラー');
+                    return;
+                }
+                dir.children[name] = { type: 'file', name: name, ext: ext, content: '' };
+                saveFS(); renderExplorerGrid(id);
+            });
+
+            document.getElementById(`${id}-upload-file`).addEventListener('click', (e) => {
+                e.stopPropagation(); document.getElementById(`${id}-file-input`).click();
+            });
+
+            document.getElementById(`${id}-file-input`).addEventListener('change', (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const parts = file.name.split('.'); const ext = parts.length > 1 ? parts.pop().toLowerCase() : 'txt';
+                const allowed = ['html', 'css', 'js', 'txt', 'zip', 'jpeg', 'png'];
+                if (!allowed.includes(ext)) {
+                    sysDialog.alert('対応していない拡張子です。', 'エラー');
+                    return;
+                }
+                const reader = new FileReader();
+                if (['jpeg', 'png', 'zip'].includes(ext)) { reader.readAsDataURL(file); }
+                else { reader.readAsText(file, 'UTF-8'); }
+                reader.onload = (event) => {
+                    const dir = getObjectByPath(windowInstances[id].currentPath);
+                    dir.children[file.name] = { type: 'file', name: file.name, ext: ext, content: event.target.result };
+                    saveFS(); renderExplorerGrid(id);
+                };
+                e.target.value = '';
+            });
+
+            document.getElementById(`${id}-exec-app`).addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const selectedKey = windowInstances[id].selectedItem;
+                if (!selectedKey) {
+                    await sysDialog.alert('ロードするHTMLファイルを選択してください。', '通知');
+                    return;
+                }
+                const dir = getObjectByPath(windowInstances[id].currentPath);
+                const item = dir.children[selectedKey];
+                if (!item || item.ext !== 'html') {
+                    await sysDialog.alert('HTMLファイルのみAppとしてロードできます。', 'エラー');
+                    return;
+                }
+
+                const appName = await sysDialog.prompt('登録するアプリケーション名を入力してください:', item.name.replace('.html', ''), 'アプリケーション登録');
+                if (!appName) return;
+
+                const appKey = 'custom_' + Math.random().toString(36).substr(2, 9);
+                customApps[appKey] = {
+                    name: appName,
+                    content: item.content
+                };
+                
+                saveCustomApps();
+                if (!appOrder.includes(appKey)) appOrder.push(appKey);
+                
+                createDesktopIconForCustomApp(appKey, appName);
+                createLauncherItemForCustomApp(appKey, appName);
+                updateGlobalDock();
+
+                await sysDialog.alert(`「${appName}」をシステムへ追加しました。デスクトップまたはランチャーから実行できます。`, '完了');
+            });
+        };
+
+        const renderExplorerGrid = (id) => {
+            const grid = document.getElementById(`${id}-grid`);
+            if(!grid) return;
+            grid.innerHTML = '';
+            const inst = windowInstances[id];
+            const dir = getObjectByPath(inst.currentPath);
+            if (!dir || !dir.children) return;
+
+            for (let key in dir.children) {
+                const item = dir.children[key];
+                const div = document.createElement('div');
+                div.className = 'file-item ' + item.type;
+                if (inst.selectedItem === key) div.classList.add('active');
+
+                let iconName = 'description';
+                if (item.type === 'dir') iconName = 'folder';
+                else if (['jpeg', 'png'].includes(item.ext)) iconName = 'image';
+                else if (item.ext === 'zip') iconName = 'folder_zip';
+                else if (['html', 'css', 'js'].includes(item.ext)) iconName = 'code';
+
+                div.innerHTML = `<span class="material-symbols-rounded">${iconName}</span><div class="file-label">${item.name}</div>`;
+                
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation(); inst.selectedItem = key; renderExplorerGrid(id);
+                });
+
+                div.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    if (item.type === 'dir') {
+                        inst.currentPath.push(key); inst.selectedItem = null; renderExplorerGrid(id);
+                    } else {
+                        triggerFileActivation(inst.currentPath, key, item);
+                    }
+                });
+                grid.appendChild(div);
+            }
+        };
+
+        const triggerFileActivation = (path, key, item) => {
+            if (['html', 'css', 'js'].includes(item.ext)) {
+                openEditor(path, key);
+            } else if (['jpeg', 'png'].includes(item.ext)) {
+                openGallery(path, key);
+            } else {
+                openNotepad(path, key);
+            }
+        };
+
+        const openEditor = (initialPath = null, initialKey = null) => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'editor', activeFile: null };
+            const html = `
+                <div class="editor-container">
+                    <div class="editor-workspace">
+                        <div class="editor-tabs">
+                            <div class="tabs-left">
+                                <div class="tab active" data-target="${id}-pane-html"><span class="material-symbols-rounded">html</span>index.html</div>
+                                <div class="tab" data-target="${id}-pane-css"><span class="material-symbols-rounded">css</span>style.css</div>
+                                <div class="tab" data-target="${id}-pane-js"><span class="material-symbols-rounded">javascript</span>script.js</div>
+                            </div>
+                            <div class="editor-actions">
+                                <button class="action-btn" id="${id}-btn-save"><span class="material-symbols-rounded">save</span></button>
+                            </div>
+                        </div>
+                        <div class="editor-textarea-wrapper">
+                            <textarea id="${id}-pane-html" class="code-pane active" spellcheck="false"></textarea>
+                            <textarea id="${id}-pane-css" class="code-pane" spellcheck="false"></textarea>
+                            <textarea id="${id}-pane-js" class="code-pane" spellcheck="false"></textarea>
+                        </div>
+                    </div>
+                    <div class="editor-preview">
+                        <div class="preview-header">Live Preview</div>
+                        <iframe id="${id}-preview" class="preview-iframe"></iframe>
+                    </div>
+                </div>
+            `;
+            createBaseWindow(id, 'IDE Editor', 'terminal', html);
+            
+            const tabs = document.querySelectorAll(`#${id} .tab`);
+            const panes = document.querySelectorAll(`#${id} .code-pane`);
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    panes.forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.target).classList.add('active');
+                });
+            });
+
+            const updatePreview = () => {
+                const hVal = document.getElementById(`${id}-pane-html`).value;
+                const cVal = `<style>${document.getElementById(`${id}-pane-css`).value}</style>`;
+                const injectionScript = `
+                    <script>
+                        window.alert = function(msg) {
+                            window.parent.postMessage({ type: 'WEBOS_ALERT', message: msg }, '*');
+                        };
+                    <\/script>
+                `;
+                const jVal = `<script>${document.getElementById(`${id}-pane-js`).value}<\/script>`;
+                const iframe = document.getElementById(`${id}-preview`);
+                const dst = iframe.contentDocument || iframe.contentWindow.document;
+                dst.open(); dst.write(hVal + cVal + injectionScript + jVal); dst.close();
+            };
+
+            panes.forEach(p => p.addEventListener('input', updatePreview));
+
+            if (initialPath && initialKey) {
+                const item = getObjectByPath(initialPath).children[initialKey];
+                windowInstances[id].activeFile = { path: [...initialPath], key: initialKey };
+                document.getElementById(`${id}-title-text`).textContent = `IDE Editor - ${item.name}`;
+                if(item.ext === 'html') document.getElementById(`${id}-pane-html`).value = item.content || '';
+                else if(item.ext === 'css') document.getElementById(`${id}-pane-css`).value = item.content || '';
+                else if(item.ext === 'js') document.getElementById(`${id}-pane-js`).value = item.content || '';
+                else document.getElementById(`${id}-pane-html`).value = item.content || '';
+            } else {
+                document.getElementById(`${id}-pane-html`).value = getObjectByPath(['root', 'index.html']).content;
+                document.getElementById(`${id}-pane-css`).value = getObjectByPath(['root', 'style.css']).content;
+                document.getElementById(`${id}-pane-js`).value = getObjectByPath(['root', 'script.js']).content;
+            }
+            updatePreview();
+
+            document.getElementById(`${id}-btn-save`).addEventListener('click', () => {
+                showVisualFolderSelector(async (targetPath) => {
+                    const defaultFileName = windowInstances[id].activeFile ? windowInstances[id].activeFile.key : 'index.html';
+                    const fname = await sysDialog.prompt('保存するファイル名（拡張子付き）:', defaultFileName, 'IDEファイル保存');
+                    if(!fname) return;
+                    const parts = fname.split('.'); const ext = parts.length > 1 ? parts.pop().toLowerCase() : 'txt';
+                    const activePane = document.querySelector(`#${id} .code-pane.active`);
+                    const code = activePane ? activePane.value : '';
+                    
+                    const targetDir = getObjectByPath(targetPath);
+                    targetDir.children[fname] = { type: 'file', name: fname, ext: ext, content: code };
+                    windowInstances[id].activeFile = { path: [...targetPath], key: fname };
+                    document.getElementById(`${id}-title-text`).textContent = `IDE Editor - ${fname}`;
+                    saveFS();
+                    refreshAllExplorers();
+                    await sysDialog.alert('ファイルを保存しました。', '完了');
+                });
+            });
+        };
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'WEBOS_ALERT') {
+                sysDialog.alert(e.data.message, 'アプリケーション通知');
+            }
+        });
+
+        const openNotepad = (initialPath = null, initialKey = null) => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'notepad', activeFile: null };
+            const html = `
+                <textarea class="notepad-content" id="${id}-text" spellcheck="false"></textarea>
+                <div class="editor-tabs" style="background:#f1f5f9; padding:4px 8px; justify-content:flex-end; border-top:1px solid #e2e8f0;">
+                    <button class="dialog-btn primary" id="${id}-save-btn" style="font-size:11px; padding:4px 10px;">Save</button>
+                </div>
+            `;
+            createBaseWindow(id, 'Notepad', 'description', html);
+
+            if(initialPath && initialKey) {
+                const item = getObjectByPath(initialPath).children[initialKey];
+                windowInstances[id].activeFile = { path: [...initialPath], key: initialKey };
+                document.getElementById(`${id}-title-text`).textContent = `Notepad - ${item.name}`;
+                document.getElementById(`${id}-text`).value = item.content || '';
+            }
+
+            document.getElementById(`${id}-save-btn`).addEventListener('click', () => {
+                showVisualFolderSelector(async (targetPath) => {
+                    const defName = windowInstances[id].activeFile ? windowInstances[id].activeFile.key : 'memo.txt';
+                    const fname = await sysDialog.prompt('ファイル名を入力してください:', defName, 'テキストファイル保存');
+                    if(!fname) return;
+                    const parts = fname.split('.'); const ext = parts.length > 1 ? parts.pop().toLowerCase() : 'txt';
+                    const targetDir = getObjectByPath(targetPath);
+                    targetDir.children[fname] = { type: 'file', name: fname, ext: ext, content: document.getElementById(`${id}-text`).value };
+                    windowInstances[id].activeFile = { path: [...targetPath], key: fname };
+                    document.getElementById(`${id}-title-text`).textContent = `Notepad - ${fname}`;
+                    saveFS(); refreshAllExplorers(); 
+                    await sysDialog.alert('ファイルを保存しました。', '完了');
+                });
+            });
+        };
+
+        const openGallery = (initialPath = null, initialKey = null) => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'gallery', activeFile: null };
+            const html = `
+                <div class="gallery-content">
+                    <img id="${id}-img" src="" style="display:none;" />
+                    <div id="${id}-empty" style="color:var(--text-muted); font-size:13px;">画像が選択されていません</div>
+                    <div class="gallery-toolbar">
+                        <button class="gallery-btn" id="${id}-set-bg" style="display:none;">背景に設定</button>
+                    </div>
+                </div>
+            `;
+            createBaseWindow(id, 'Gallery', 'image', html);
+
+            if(initialPath && initialKey) {
+                const item = getObjectByPath(initialPath).children[initialKey];
+                windowInstances[id].activeFile = { path: [...initialPath], key: initialKey };
+                document.getElementById(`${id}-title-text`).textContent = `Gallery - ${item.name}`;
+                const img = document.getElementById(`${id}-img`);
+                img.src = item.content; img.style.display = 'block';
+                document.getElementById(`${id}-empty`).style.display = 'none';
+                document.getElementById(`${id}-set-bg`).style.display = 'inline-block';
+            }
+
+            document.getElementById(`${id}-set-bg`).addEventListener('click', () => {
+                if(windowInstances[id].activeFile) {
+                    const item = getObjectByPath(windowInstances[id].activeFile.path).children[windowInstances[id].activeFile.key];
+                    document.documentElement.style.setProperty('--bg-image', `url(${item.content})`);
+                    localStorage.setItem('webos_wallpaper', item.content);
+                }
+            });
+        };
+
+        const openStore = () => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'store' };
+            const html = `
+                <div class="store-content">
+                    <div class="store-empty-wrapper">
+                        <span class="material-symbols-rounded">cloud_upload</span>
+                        <div class="store-empty-text">アプリケーションのアップロードとインストール</div>
+                        <div class="store-desc">
+                            PC上のHTMLプログラムファイル（.html）を直接アップロードして、カスタムWebOSアプリケーションとして独自のシステム環境へインストールできます。
+                        </div>
+                        <button class="store-upload-btn" id="${id}-btn-upload-store">
+                            <span class="material-symbols-rounded">publish</span>
+                            HTMLアプリをインストール
+                        </button>
+                        <input type="file" id="${id}-store-file-input" accept=".html" style="display:none;" />
+                    </div>
+                </div>
+            `;
+            createBaseWindow(id, 'App Store', 'storefront', html);
+
+            document.getElementById(`${id}-btn-upload-store`).addEventListener('click', () => {
+                document.getElementById(`${id}-store-file-input`).click();
+            });
+
+            document.getElementById(`${id}-store-file-input`).addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const parts = file.name.split('.');
+                const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+                if (ext !== 'html') {
+                    sysDialog.alert('App StoreからはHTMLファイル（.html）のみインストール可能です。', 'エラー');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.readAsText(file, 'UTF-8');
+                reader.onload = async (event) => {
+                    const appName = await sysDialog.prompt('インストールするアプリケーション名を入力してください:', file.name.replace('.html', ''), 'Appインストーラー');
+                    if (!appName) return;
+
+                    const appKey = 'custom_' + Math.random().toString(36).substr(2, 9);
+                    customApps[appKey] = {
+                        name: appName,
+                        content: event.target.result
+                    };
+                    
+                    saveCustomApps();
+                    if (!appOrder.includes(appKey)) appOrder.push(appKey);
+                    
+                    createDesktopIconForCustomApp(appKey, appName);
+                    createLauncherItemForCustomApp(appKey, appName);
+                    updateGlobalDock();
+
+                    await sysDialog.alert(`「${appName}」のインストールが完了しました。デスクトップまたはランチャーメニューから起動できます。`, 'インストール成功');
+                };
+                e.target.value = '';
+            });
+        };
+
+        const openCustomApp = (appKey) => {
+            const appData = customApps[appKey];
+            if (!appData) return;
+            const id = generateUUID();
+            windowInstances[id] = { app: appKey };
+            const html = `
+                <div style="width:100%; height:calc(100% - 48px); background:#ffffff;">
+                    <iframe id="${id}-frame" style="width:100%; height:100%; border:none;"></iframe>
+                </div>
+            `;
+            createBaseWindow(id, appData.name, 'deployed_code', html);
+            
+            const iframe = document.getElementById(`${id}-frame`);
+            const dst = iframe.contentDocument || iframe.contentWindow.document;
+            
+            const injectionScript = `
+                <script>
+                    window.alert = function(msg) {
+                        window.parent.postMessage({ type: 'WEBOS_ALERT', message: msg }, '*');
+                    };
+                <\/script>
+            `;
+            dst.open();
+            dst.write(appData.content + injectionScript);
+            dst.close();
+        };
+
+        const openSettings = () => {
+            const id = generateUUID();
+            windowInstances[id] = { app: 'settings' };
+            const html = `
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h3>Personalization</h3>
+                        <div class="theme-selector">
+                            <div class="theme-card active" data-theme="light"><div class="theme-title">Light UI (Default)</div></div>
+                        </div>
+                    </div>
+                    <div class="settings-section" style="margin-top: 16px;">
+                        <h3>System Recovery</h3>
+                        <div class="danger-zone">
+                            <p style="font-size: 12px; color: #ef4444; margin-bottom: 12px; line-height: 1.5;">
+                                ⚠️ <strong>注意:</strong> WebOSを完全にリセットします。保存されたすべてのファイル、インストールされたカスタムアプリケーション、壁紙設定が完全に削除され、初期状態に戻ります。
+                            </p>
+                            <button class="danger-btn" id="${id}-btn-reset">WebOSを完全にリセット</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createBaseWindow(id, 'Settings', 'settings', html);
+
+            document.getElementById(`${id}-btn-reset`).addEventListener('click', async () => {
+                const verify = await sysDialog.prompt('リセットを確定するには、半角で「RESET」と入力してください。', '', 'システム完全初期化');
+                if (verify === 'RESET') {
+                    localStorage.clear();
+                    await sysDialog.alert('システムを初期化しました。ページをリロードして再起動します。', 'リセット完了');
+                    window.location.reload();
+                } else if (verify !== null) {
+                    await sysDialog.alert('入力内容が一致しないため、リセットは取り消されました。', 'キャンセル');
+                }
+            });
+        };
+
+        const showVisualFolderSelector = (callback) => {
+            const diagId = 'dialog-' + Math.random().toString(36).substr(2, 9);
+            const overlay = document.createElement('div');
+            overlay.className = 'dialog-overlay';
+            overlay.id = diagId;
+
+            const dirs = getDirectoriesList();
+            let listHtml = '';
+            dirs.forEach((d, idx) => {
+                listHtml += `<div class="dialog-dir-item ${idx===0?'selected':''}" data-path='${JSON.stringify(d.path)}'><span class="material-symbols-rounded" style="color:#f59e0b; font-size:18px;">folder</span>${d.name}</div>`;
+            });
+
+            overlay.innerHTML = `
+                <div class="dialog-box">
+                    <div class="dialog-header">保存先フォルダを選択</div>
+                    <div class="dialog-body">${listHtml}</div>
+                    <div class="dialog-footer">
+                        <button class="dialog-btn secondary" id="${diagId}-cancel">キャンセル</button>
+                        <button class="dialog-btn primary" id="${diagId}-ok">決定</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('dialog-container').appendChild(overlay);
+
+            let selectedPath = dirs[0].path;
+            const items = overlay.querySelectorAll('.dialog-dir-item');
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    items.forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    selectedPath = JSON.parse(item.dataset.path);
+                });
+            });
+
+            document.getElementById(`${diagId}-cancel`).addEventListener('click', () => overlay.remove());
+            document.getElementById(`${diagId}-ok`).addEventListener('click', () => {
+                overlay.remove(); callback(selectedPath);
+            });
+        };
+
+        const refreshAllExplorers = () => {
+            for(let id in windowInstances) {
+                if(windowInstances[id].app === 'explorer') renderExplorerGrid(id);
+            }
+        };
+
+        const updateGlobalDock = () => {
+            const taskbarApps = document.getElementById('taskbar-apps-container');
+            taskbarApps.innerHTML = '';
+
+            appOrder.forEach(appName => {
+                const dockIcon = document.createElement('div');
+                dockIcon.className = 'running-app-icon';
+                dockIcon.setAttribute('draggable', 'true');
+                dockIcon.dataset.appName = appName;
+
+                let iconStr = 'deployed_code';
+                if(appName === 'explorer') iconStr = 'folder_open';
+                else if(appName === 'editor') iconStr = 'terminal';
+                else if(appName === 'store') iconStr = 'storefront';
+                else if(appName === 'settings') iconStr = 'settings';
+                else if(appName === 'notepad') iconStr = 'description';
+                else if(appName === 'gallery') iconStr = 'image';
+
+                dockIcon.innerHTML = `<span class="material-symbols-rounded">${iconStr}</span>`;
+
+                let matches = Object.keys(windowInstances).filter(k => windowInstances[k].app === appName);
+                if(matches.length > 0) {
+                    dockIcon.classList.add('running');
+                    let hasActive = matches.some(k => document.getElementById(k).classList.contains('active') && !document.getElementById(k).classList.contains('minimized'));
+                    if(hasActive) dockIcon.classList.add('active');
+                }
+
+                dockIcon.addEventListener('click', () => {
+                    let appMatches = Object.keys(windowInstances).filter(k => windowInstances[k].app === appName);
+                    if(appMatches.length === 0) {
+                        launchAppByName(appName);
+                    } else {
+                        let target = appMatches[appMatches.length - 1];
+                        let w = document.getElementById(target);
+                        if(w.classList.contains('minimized') || !w.classList.contains('active')) {
+                            w.classList.remove('minimized'); makeActive(target);
+                        } else {
+                            w.classList.add('minimized'); w.classList.remove('active'); updateGlobalDock();
+                        }
+                    }
+                });
+
+                dockIcon.addEventListener('dragstart', (e) => {
+                    dockIcon.classList.add('dragging'); e.dataTransfer.setData('text/plain', appName);
+                });
+                dockIcon.addEventListener('dragend', () => dockIcon.classList.remove('dragging'));
+                dockIcon.addEventListener('dragover', (e) => e.preventDefault());
+                dockIcon.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const draggedName = e.dataTransfer.getData('text/plain');
+                    if (draggedName !== appName) {
+                        const fromIdx = appOrder.indexOf(draggedName); const toIdx = appOrder.indexOf(appName);
+                        if (fromIdx > -1 && toIdx > -1) {
+                            appOrder.splice(fromIdx, 1); appOrder.splice(toIdx, 0, draggedName);
+                            localStorage.setItem('webos_app_order', JSON.stringify(appOrder)); updateGlobalDock();
+                        }
+                    }
+                });
+                taskbarApps.appendChild(dockIcon);
+            });
+        };
+
+        const launchAppByName = (name) => {
+            if(name === 'explorer') openExplorer();
+            else if(name === 'editor') openEditor();
+            else if(name === 'store') openStore();
+            else if(name === 'settings') openSettings();
+            else if(name === 'notepad') openNotepad();
+            else if(name === 'gallery') openGallery();
+            else if(customApps[name]) openCustomApp(name);
+        };
+
+        document.getElementById('icon-explorer').addEventListener('click', () => openExplorer());
+        document.getElementById('icon-editor').addEventListener('click', () => openEditor());
+        document.getElementById('icon-store').addEventListener('click', () => openStore());
+        document.getElementById('icon-settings').addEventListener('click', () => openSettings());
+
+        const launcherTrigger = document.getElementById('sys-apps-trigger');
+        const launcherMenu = document.getElementById('app-launcher-menu');
+        launcherTrigger.addEventListener('click', (e) => { e.stopPropagation(); launcherMenu.classList.toggle('show'); });
+        document.addEventListener('click', () => launcherMenu.classList.remove('show'));
+        
+        launcherMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.launcher-item');
+            if (item) {
+                e.stopPropagation(); launchAppByName(item.dataset.app); launcherMenu.classList.remove('show');
+            }
+        });
+
+        loadSettings();
+        loadCustomApps();
+        updateGlobalDock();
+    </script>
+</body>
+</html>
