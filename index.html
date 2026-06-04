@@ -936,7 +936,6 @@
         let appOrder = ['explorer', 'editor', 'store', 'settings', 'notepad', 'gallery'];
         let customApps = {};
 
-        // 独自ダイアログシステム用マネージャー（非同期）
         const sysDialog = {
             alert: (message, title = 'システム通知') => {
                 return new Promise((resolve) => {
@@ -1830,6 +1829,7 @@
                     }
                 });
 
+                // タッチデバイスでのドラッグ対応
                 dockIcon.addEventListener('dragstart', (e) => {
                     dockIcon.classList.add('dragging'); e.dataTransfer.setData('text/plain', appName);
                 });
